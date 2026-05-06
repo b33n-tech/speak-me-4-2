@@ -1,0 +1,1376 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="LinguaBridge" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="logo.svg" />
+  <title>LinguaBridge</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #1a1a2e;
+      --surface2: #252540;
+      --accent: #e8ff6e;
+      --accent2: #6ee8ff;
+      --text: #f0f0f0;
+      --text-dim: #9090a8;
+      --border: rgba(255,255,255,0.08);
+      --radius: 16px;
+      --font-size: 18px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .theme-light {
+      --bg: #f5f5f0;
+      --surface: #ffffff;
+      --surface2: #ebebea;
+      --text: #111118;
+      --text-dim: #666678;
+      --border: rgba(0,0,0,0.1);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; touch-action: manipulation; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      font-size: var(--font-size);
+      transition: background 0.3s, color 0.3s;
+    }
+    .screen { display: none; flex-direction: column; height: 100vh; width: 100%; position: fixed; top: 0; left: 0; }
+    .screen.active { display: flex; }
+
+    #screen-welcome {
+      background: var(--bg);
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      padding: 32px;
+    }
+    .welcome-logo { width: 80px; height: 80px; }
+    .welcome-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      text-align: center;
+    }
+    .welcome-title span { color: var(--accent); }
+    .welcome-sub { color: var(--text-dim); text-align: center; font-size: 1rem; max-width: 280px; }
+    .lang-picker-section { width: 100%; max-width: 340px; }
+    .lang-picker-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 10px;
+    }
+    .lang-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+    .lang-btn {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      background: var(--surface);
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+      position: relative;
+    }
+    .lang-btn.selected {
+      border-color: var(--accent);
+      background: rgba(232,255,110,0.12);
+      transform: scale(1.08);
+    }
+    .lang-btn.conflict {
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    .lang-btn:not(.conflict):active { transform: scale(0.95); }
+    .start-btn {
+      width: 100%;
+      max-width: 340px;
+      padding: 16px;
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: var(--radius);
+      font-family: 'Syne', sans-serif;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .start-btn:active { transform: scale(0.97); }
+    .start-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #screen-main { background: var(--bg); flex-direction: column; }
+    .top-bar {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      gap: 8px;
+      flex-shrink: 0;
+      z-index: 10;
+    }
+    .top-bar-langs { display: flex; align-items: center; gap: 6px; flex: 1; font-size: 1.2rem; }
+    .top-bar-arrow { color: var(--accent); font-size: 0.9rem; }
+    .top-bar-title { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--accent); }
+    .top-bar-actions { display: flex; gap: 8px; }
+    .icon-btn {
+      width: 38px; height: 38px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .icon-btn:active { transform: scale(0.9); }
+    .icon-btn.active-mode { background: var(--accent); color: #111; border-color: var(--accent); }
+
+    .translation-banner {
+      background: var(--surface);
+      border-bottom: 2px solid var(--accent);
+      padding: 14px 16px;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .translation-banner.empty { border-bottom-color: var(--border); opacity: 0.5; }
+    .translation-flag { font-size: 1.3rem; }
+    .translation-text {
+      font-family: 'Syne', sans-serif;
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--accent);
+      flex: 1;
+      line-height: 1.3;
+    }
+    .translation-phonetic { font-size: 0.8rem; color: var(--text-dim); font-style: italic; }
+    .translation-audio-btn {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      color: #111;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: transform 0.15s;
+    }
+    .translation-audio-btn:active { transform: scale(0.85); }
+    .translation-hint { color: var(--text-dim); font-size: 0.9rem; font-style: italic; }
+
+    .suggestions-bar {
+      display: flex;
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--surface2);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      scrollbar-width: none;
+    }
+    .suggestions-bar::-webkit-scrollbar { display: none; }
+    .suggestions-label {
+      font-size: 0.65rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent2);
+      white-space: nowrap;
+      align-self: center;
+      flex-shrink: 0;
+    }
+    .suggestion-chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      white-space: nowrap;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s;
+      flex-shrink: 0;
+    }
+    .suggestion-chip:active { background: var(--accent2); color: #111; border-color: var(--accent2); }
+
+    .items-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+    .item-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      text-align: left;
+      cursor: pointer;
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: var(--font-size);
+      line-height: 1.3;
+      transition: all 0.15s;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .item-btn:active { transform: scale(0.98); background: var(--surface2); }
+    .item-btn.active { border-color: var(--accent); background: rgba(232,255,110,0.08); }
+    .item-btn .item-text { flex: 1; }
+    .item-btn .item-arrow { color: var(--text-dim); font-size: 0.8rem; flex-shrink: 0; }
+
+    .item-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+    .item-pair .item-btn { text-align: center; justify-content: center; }
+
+    #screen-split { background: var(--bg); }
+    .split-top, .split-bottom {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      position: relative;
+    }
+    .split-top { transform: rotate(180deg); }
+    .split-divider { height: 3px; background: var(--accent); flex-shrink: 0; position: relative; }
+    .split-divider::before {
+      content: '⟺';
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      background: var(--accent);
+      color: #111;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: bold;
+    }
+    .split-received {
+      background: var(--surface2);
+      padding: 10px 14px;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      font-size: 1rem;
+      color: var(--accent2);
+      font-style: italic;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Syne', sans-serif;
+    }
+    .split-received.empty { color: var(--text-dim); }
+    .split-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 0; flex: 1; }
+    .split-choice-btn {
+      border: none;
+      background: var(--surface);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: calc(var(--font-size) * 0.9);
+      cursor: pointer;
+      padding: 12px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+      transition: all 0.15s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .split-choice-btn:last-child { border-right: none; }
+    .split-choice-btn:active { background: var(--accent); color: #111; }
+    .split-browse-btn {
+      background: var(--surface2);
+      border-top: 1px solid var(--border);
+      border-bottom: none;
+      border-left: none;
+      border-right: none;
+      color: var(--text-dim);
+      font-size: 0.75rem;
+      padding: 8px;
+      cursor: pointer;
+      font-family: 'DM Sans', sans-serif;
+      grid-column: 1 / -1;
+    }
+
+    #screen-settings { background: var(--bg); flex-direction: column; }
+    .settings-header {
+      display: flex;
+      align-items: center;
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .settings-title { font-family: 'Syne', sans-serif; font-size: 1.2rem; font-weight: 700; flex: 1; }
+    .settings-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 20px; }
+    .settings-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .settings-row-label { font-size: 0.95rem; }
+    .settings-row-sub { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; }
+    .toggle {
+      width: 46px; height: 26px;
+      background: var(--surface2);
+      border-radius: 13px;
+      border: none;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s;
+      flex-shrink: 0;
+    }
+    .toggle.on { background: var(--accent); }
+    .toggle::after {
+      content: '';
+      position: absolute;
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      top: 3px; left: 3px;
+      transition: transform 0.2s;
+    }
+    .toggle.on::after { transform: translateX(20px); }
+    .size-control { display: flex; align-items: center; gap: 10px; }
+    .size-btn {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      color: var(--text);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .size-val { font-weight: 600; font-size: 0.9rem; min-width: 28px; text-align: center; }
+
+    #screen-phonetics { background: var(--bg); flex-direction: column; }
+    .phonetics-table { width: 100%; border-collapse: collapse; }
+    .phonetics-table th {
+      background: var(--surface2);
+      font-family: 'Syne', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      padding: 8px 10px;
+      text-align: left;
+    }
+    .phonetics-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 0.85rem; vertical-align: top; }
+    .phonetics-table .phone-sym { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 1rem; color: var(--accent); }
+
+    .bottom-nav { display: flex; background: var(--surface); border-top: 1px solid var(--border); flex-shrink: 0; }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 4px 8px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      gap: 3px;
+      transition: color 0.15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .nav-btn .nav-icon { font-size: 1.3rem; }
+    .nav-btn .nav-label { font-size: 0.65rem; font-weight: 500; letter-spacing: 0.05em; }
+    .nav-btn.active { color: var(--accent); }
+
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 100;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      max-height: 75vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 24px;
+    }
+    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto; flex-shrink: 0; }
+    .modal-title { font-family: 'Syne', sans-serif; font-weight: 700; padding: 4px 16px 12px; flex-shrink: 0; border-bottom: 1px solid var(--border); }
+    .modal-items { overflow-y: auto; padding: 8px 12px; display: flex; flex-direction: column; gap: 6px; }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .item-btn { animation: slideUp 0.2s ease both; }
+
+    .compose-bar {
+      display: none;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--surface2);
+      border-bottom: 2px solid var(--accent);
+      flex-shrink: 0;
+    }
+    .compose-bar.visible { display: flex; }
+    .compose-bar-chips { display: flex; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+    .compose-bar-chips::-webkit-scrollbar { display: none; }
+    .compose-chip {
+      background: var(--accent);
+      color: #111;
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+      flex-shrink: 0;
+      border: none;
+    }
+    .compose-chip-x { opacity: 0.55; font-size: 0.85rem; }
+    .compose-go-btn {
+      background: var(--accent);
+      color: #111;
+      border: none;
+      border-radius: 12px;
+      padding: 9px 14px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 0.85rem;
+      cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .compose-clear-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+      padding: 7px 10px;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .item-btn.multiselected { border-color: var(--accent); background: rgba(232,255,110,0.15); }
+    .item-btn.multiselected .item-arrow { color: var(--accent); font-weight: 700; }
+
+    #compose-result-modal .modal-sheet { max-height: 92vh; }
+    .compose-result-block { background: var(--surface2); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+    .compose-result-lang { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px; }
+    .compose-result-text { font-family: 'Syne', sans-serif; font-size: 1.05rem; font-weight: 600; line-height: 1.65; color: var(--text); }
+    .compose-audio-btn {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 14px;
+      color: var(--text);
+      font-size: 0.85rem;
+      cursor: pointer;
+      width: 100%;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .compose-audio-btn:active { opacity: 0.7; }
+    .compose-sequence-label { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent2); margin-bottom: 8px; }
+    .compose-sequence-pills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+    .compose-seq-pill { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 0.75rem; color: var(--text-dim); }
+
+    .hidden { display: none !important; }
+    .rtl { direction: rtl; }
+  </style>
+</head>
+<body>
+
+<div id="screen-welcome" class="screen active">
+  <img src="logo.svg" class="welcome-logo" alt="LinguaBridge" />
+  <div class="welcome-title">Lingua<span>Bridge</span></div>
+  <div class="welcome-sub">Communication instantanée, sans barrière de langue</div>
+  <div class="lang-picker-section">
+    <div class="lang-picker-label">🏠 Ma langue</div>
+    <div class="lang-grid" id="native-lang-grid"></div>
+  </div>
+  <div class="lang-picker-section">
+    <div class="lang-picker-label">🎯 Langue cible</div>
+    <div class="lang-grid" id="target-lang-grid"></div>
+  </div>
+  <button class="start-btn" id="start-btn">Commencer →</button>
+</div>
+
+<div id="screen-main" class="screen">
+  <div class="top-bar">
+    <div class="top-bar-langs" id="topbar-langs">
+      <span id="topbar-native-flag">🇫🇷</span>
+      <span class="top-bar-arrow">→</span>
+      <span id="topbar-target-flag">🇬🇧</span>
+    </div>
+    <div class="top-bar-title">LinguaBridge</div>
+    <div class="top-bar-actions">
+      <button class="icon-btn" id="split-toggle-btn" title="Mode split screen">⧉</button>
+      <button class="icon-btn" id="settings-btn" title="Paramètres">⚙</button>
+    </div>
+  </div>
+  <div class="translation-banner empty" id="translation-banner">
+    <span class="translation-flag" id="trans-flag">🎯</span>
+    <div style="flex:1">
+      <div class="translation-text" id="trans-text">
+        <span class="translation-hint">Appuie sur un item pour voir la traduction</span>
+      </div>
+      <div class="translation-phonetic hidden" id="trans-phonetic"></div>
+    </div>
+    <button class="translation-audio-btn hidden" id="trans-audio-btn" title="Écouter">▶</button>
+  </div>
+  <div class="suggestions-bar hidden" id="suggestions-bar">
+    <span class="suggestions-label">→</span>
+    <div id="suggestions-chips" style="display:flex;gap:8px;"></div>
+  </div>
+  <div class="compose-bar" id="compose-bar">
+    <div class="compose-bar-chips" id="compose-chips"></div>
+    <button class="compose-clear-btn" onclick="clearCompose()">✕</button>
+    <button class="compose-go-btn" onclick="openComposeResult()">Faire la phrase →</button>
+  </div>
+  <div class="items-list" id="items-list"></div>
+  <div class="bottom-nav">
+    <button class="nav-btn active" data-screen="main"><span class="nav-icon">💬</span><span class="nav-label">Phrases</span></button>
+    <button class="nav-btn" data-screen="split"><span class="nav-icon">⧉</span><span class="nav-label">Split</span></button>
+    <button class="nav-btn" data-screen="phonetics"><span class="nav-icon">🔤</span><span class="nav-label">Phonétique</span></button>
+    <button class="nav-btn" data-screen="settings"><span class="nav-icon">⚙</span><span class="nav-label">Réglages</span></button>
+  </div>
+</div>
+
+<div id="screen-split" class="screen">
+  <div class="split-top">
+    <div class="split-received" id="split-their-received">
+      <span id="split-their-received-txt" class="empty">En attente...</span>
+    </div>
+    <div class="split-choices" id="split-their-choices"></div>
+  </div>
+  <div class="split-divider">
+    <div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--accent);color:#111;width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85rem;font-weight:bold;z-index:1;">⟺</div>
+  </div>
+  <div class="split-bottom">
+    <div class="split-received" id="split-my-received">
+      <span id="split-my-received-txt" class="empty">Aucune réponse reçue</span>
+    </div>
+    <div class="split-choices" id="split-my-choices"></div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" data-screen="main"><span class="nav-icon">💬</span><span class="nav-label">Phrases</span></button>
+    <button class="nav-btn active" data-screen="split"><span class="nav-icon">⧉</span><span class="nav-label">Split</span></button>
+    <button class="nav-btn" data-screen="phonetics"><span class="nav-icon">🔤</span><span class="nav-label">Phonétique</span></button>
+    <button class="nav-btn" data-screen="settings"><span class="nav-icon">⚙</span><span class="nav-label">Réglages</span></button>
+  </div>
+</div>
+
+<div id="screen-settings" class="screen">
+  <div class="settings-header">
+    <button class="icon-btn" onclick="showScreen('main')">←</button>
+    <div class="settings-title">Réglages</div>
+  </div>
+  <div class="settings-body">
+    <div>
+      <div class="settings-section-title">Langues</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">🏠 Ma langue natale</div>
+          <div class="settings-row-sub" id="native-lang-display">Français</div>
+        </div>
+        <div class="lang-grid" id="settings-native-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-width:140px;"></div>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">🎯 Langue cible</div>
+          <div class="settings-row-sub" id="target-lang-display">Anglais</div>
+        </div>
+        <div class="lang-grid" id="settings-target-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;max-width:140px;"></div>
+      </div>
+    </div>
+    <div>
+      <div class="settings-section-title">Affichage</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Thème clair</div>
+          <div class="settings-row-sub">Fond blanc, police noire</div>
+        </div>
+        <button class="toggle" id="toggle-theme" onclick="toggleTheme()"></button>
+      </div>
+      <div class="settings-row">
+        <div><div class="settings-row-label">Taille de la police</div></div>
+        <div class="size-control">
+          <button class="size-btn" onclick="changeFontSize(-1)">−</button>
+          <span class="size-val" id="font-size-display">18</span>
+          <button class="size-btn" onclick="changeFontSize(1)">+</button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="settings-section-title">Options</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Suggestions statistiques</div>
+          <div class="settings-row-sub">Afficher des suites probables en haut</div>
+        </div>
+        <button class="toggle" id="toggle-suggestions" onclick="toggleSuggestions()"></button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Items en binôme</div>
+          <div class="settings-row-sub">Afficher oui/non côte à côte</div>
+        </div>
+        <button class="toggle on" id="toggle-pairs" onclick="togglePairs()"></button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Phonétique</div>
+          <div class="settings-row-sub">Transcription simplifiée sous la traduction</div>
+        </div>
+        <button class="toggle" id="toggle-phonetic" onclick="togglePhonetic()"></button>
+      </div>
+      <div class="settings-row" id="row-abjad" style="display:none">
+        <div>
+          <div class="settings-row-label">Alphabet latin uniquement</div>
+          <div class="settings-row-sub">Remplace l'arabe/persan par la transcription</div>
+        </div>
+        <button class="toggle" id="toggle-latin" onclick="toggleLatin()"></button>
+      </div>
+    </div>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" data-screen="main"><span class="nav-icon">💬</span><span class="nav-label">Phrases</span></button>
+    <button class="nav-btn" data-screen="split"><span class="nav-icon">⧉</span><span class="nav-label">Split</span></button>
+    <button class="nav-btn" data-screen="phonetics"><span class="nav-icon">🔤</span><span class="nav-label">Phonétique</span></button>
+    <button class="nav-btn active" data-screen="settings"><span class="nav-icon">⚙</span><span class="nav-label">Réglages</span></button>
+  </div>
+</div>
+
+<div id="screen-phonetics" class="screen">
+  <div class="settings-header">
+    <button class="icon-btn" onclick="showScreen('main')">←</button>
+    <div class="settings-title">Répertoire phonétique</div>
+  </div>
+  <div style="flex:1;overflow-y:auto;padding:12px;">
+    <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:14px;">Transcription simplifiée commune à toutes les langues</div>
+    <table class="phonetics-table" id="phonetics-table"></table>
+  </div>
+  <div class="bottom-nav">
+    <button class="nav-btn" data-screen="main"><span class="nav-icon">💬</span><span class="nav-label">Phrases</span></button>
+    <button class="nav-btn" data-screen="split"><span class="nav-icon">⧉</span><span class="nav-label">Split</span></button>
+    <button class="nav-btn active" data-screen="phonetics"><span class="nav-icon">🔤</span><span class="nav-label">Phonétique</span></button>
+    <button class="nav-btn" data-screen="settings"><span class="nav-icon">⚙</span><span class="nav-label">Réglages</span></button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="browse-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="browse-modal-title">Choisir une phrase</div>
+    <div class="modal-items" id="browse-modal-items"></div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="compose-result-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="padding:4px 16px 12px;border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-weight:700;">
+      🗣 Séquence composée
+    </div>
+    <div style="overflow-y:auto;padding:16px;flex:1;">
+      <div class="compose-sequence-label">Blocs sélectionnés</div>
+      <div class="compose-sequence-pills" id="compose-seq-pills"></div>
+      <div class="compose-result-block">
+        <div class="compose-result-lang" id="compose-native-lang-label">🏠 Français</div>
+        <div class="compose-result-text" id="compose-native-text"></div>
+        <button class="compose-audio-btn" id="compose-native-audio">▶ Écouter</button>
+      </div>
+      <div class="compose-result-block">
+        <div class="compose-result-lang" id="compose-target-lang-label">🎯 Traduction</div>
+        <div class="compose-result-text" id="compose-target-text"></div>
+        <button class="compose-audio-btn" id="compose-target-audio">▶ Écouter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const LANGUAGES = {
+  fr: { name: 'Français', flag: '🇫🇷', rtl: false },
+  en: { name: 'English', flag: '🇬🇧', rtl: false },
+  de: { name: 'Deutsch', flag: '🇩🇪', rtl: false },
+  it: { name: 'Italiano', flag: '🇮🇹', rtl: false },
+  es: { name: 'Español', flag: '🇪🇸', rtl: false },
+  pl: { name: 'Polski', flag: '🇵🇱', rtl: false },
+  ar: { name: 'عربي', flag: '🇸🇦', rtl: true, abjad: true },
+  fa: { name: 'فارسی', flag: '🇮🇷', rtl: true, abjad: true },
+  prs: { name: 'دری', flag: '🇦🇫', rtl: true, abjad: true },
+};
+
+const ITEMS_RAW = [
+  { id: 'oui', fr: 'Oui', pair: 'non', tr: { en:'Yes', de:'Ja', it:'Sì', es:'Sí', pl:'Tak', ar:'نعم', fa:'بله', prs:'بلی' }, ph: { en:'yes', de:'ya', it:'si', es:'si', ar:'na\'am', fa:'ba-le', prs:'ba-li' } },
+  { id: 'non', fr: 'Non', pair: 'oui', tr: { en:'No', de:'Nein', it:'No', es:'No', pl:'Nie', ar:'لا', fa:'نه', prs:'نه' }, ph: { en:'no', de:'nayn', it:'no', es:'no', ar:'la', fa:'na', prs:'na' } },
+  { id: 'daccord', fr: "D'accord", pair: 'pasdaccord', tr: { en:'Okay / Agreed', de:'Einverstanden', it:'Va bene', es:'De acuerdo', pl:'Zgoda', ar:'حسناً', fa:'باشه', prs:'باشه' }, ph: { en:'o-key', de:'ayn-fer-shtanden', it:'va be-ne', es:'de a-kwer-do', ar:'has-anan', fa:'ba-she', prs:'ba-she' } },
+  { id: 'pasdaccord', fr: "Pas d'accord", pair: 'daccord', tr: { en:'I disagree', de:'Nicht einverstanden', it:'Non sono d\'accordo', es:'No estoy de acuerdo', pl:'Nie zgadzam się', ar:'لست موافقاً', fa:'موافق نیستم', prs:'موافق نیستم' }, ph: {} },
+  { id: 'jeveux', fr: 'Je veux', pair: 'jeveux-pas', tr: { en:'I want', de:'Ich will', it:'Voglio', es:'Quiero', pl:'Chcę', ar:'أريد', fa:'می‌خوام', prs:'می‌خواهم' }, ph: { en:'ay wont', de:'ich vil', it:'vo-lyo', es:'kye-ro', ar:'u-reed', fa:'mi-kham', prs:'mi-kha-hem' } },
+  { id: 'jeveux-pas', fr: 'Je ne veux pas', pair: 'jeveux', tr: { en:"I don't want", de:'Ich will nicht', it:'Non voglio', es:'No quiero', pl:'Nie chcę', ar:'لا أريد', fa:'نمی‌خوام', prs:'نمی‌خواهم' }, ph: {} },
+  { id: 'arrete', fr: 'Arrête', pair: 'continue', tr: { en:'Stop', de:'Hör auf', it:'Fermati', es:'Para', pl:'Zatrzymaj się', ar:'توقف', fa:'وایسا', prs:'بس کن' }, ph: { en:'stop', de:'hör owf', it:'fer-ma-ti', es:'pa-ra', ar:'taw-waf', fa:'vay-sa', prs:'bas kon' } },
+  { id: 'continue', fr: 'Continue', pair: 'arrete', tr: { en:'Continue', de:'Mach weiter', it:'Continua', es:'Continúa', pl:'Kontynuuj', ar:'استمر', fa:'ادامه بده', prs:'ادامه بده' }, ph: {} },
+  { id: 'jaime', fr: "J'aime", pair: 'jaimepas', tr: { en:'I like it', de:'Ich mag es', it:'Mi piace', es:'Me gusta', pl:'Lubię to', ar:'أحبه', fa:'خوشم میاد', prs:'خوشم میاد' }, ph: {} },
+  { id: 'jaimepas', fr: "Je n'aime pas", pair: 'jaime', tr: { en:"I don't like it", de:'Ich mag es nicht', it:'Non mi piace', es:'No me gusta', pl:'Nie lubię tego', ar:'لا أحبه', fa:'خوشم نمیاد', prs:'خوشم نمیاد' }, ph: {} },
+  { id: 'comprends', fr: 'Je comprends', pair: 'comprendspas', tr: { en:'I understand', de:'Ich verstehe', it:'Capisco', es:'Entiendo', pl:'Rozumiem', ar:'أفهم', fa:'می‌فهمم', prs:'می‌فهمم' }, ph: { en:'ay ander-stand', de:'ich fer-shte-e', it:'ka-pis-ko', es:'en-tyen-do', ar:'af-ham', fa:'mi-fa-ham', prs:'mi-fa-ham' } },
+  { id: 'comprendspas', fr: 'Je ne comprends pas', pair: 'comprends', tr: { en:"I don't understand", de:'Ich verstehe nicht', it:'Non capisco', es:'No entiendo', pl:'Nie rozumiem', ar:'لا أفهم', fa:'نمی‌فهمم', prs:'نمی‌فهمم' }, ph: {} },
+  { id: 'repete', fr: 'Répète', pair: 'repete-doucement', tr: { en:'Repeat please', de:'Wiederhol das', it:'Ripeti', es:'Repite', pl:'Powtórz', ar:'كرر', fa:'تکرار کن', prs:'تکرار کن' }, ph: {} },
+  { id: 'repete-doucement', fr: 'Répète doucement', pair: 'repete', tr: { en:'Slowly please', de:'Langsam bitte', it:'Ripeti piano', es:'Más despacio', pl:'Wolniej proszę', ar:'ببطء من فضلك', fa:'آروم تر', prs:'آهسته‌تر' }, ph: {} },
+  { id: 'bonjour', fr: 'Bonjour', tr: { en:'Hello', de:'Hallo', it:'Ciao', es:'Hola', pl:'Cześć', ar:'مرحباً', fa:'سلام', prs:'سلام' }, ph: { en:'he-lo', de:'ha-lo', it:'cha-o', es:'o-la', ar:'mar-ha-ban', fa:'sa-lam', prs:'sa-lam' } },
+  { id: 'enchante', fr: 'Enchanté·e', tr: { en:'Nice to meet you', de:'Schön dich kennenzulernen', it:'Piacere', es:'Mucho gusto', pl:'Miło mi', ar:'تشرفت بلقائك', fa:'از آشنایی خوشحالم', prs:'خوش آمدی' }, ph: { en:'nays to mit yu', de:'shön dich ke-nen-tser-nen', it:'pya-che-re', es:'mu-cho gus-to', ar:'ta-shar-raf-tu', fa:'az ash-na-yi khosh-ha-lam', prs:'khosh a-ma-di' } },
+  { id: 'aurevoir', fr: 'Au revoir', tr: { en:'Goodbye', de:'Tschüss', it:'Arrivederci', es:'Adiós', pl:'Do widzenia', ar:'مع السلامة', fa:'خداحافظ', prs:'خداحافظ' }, ph: { en:'gud-bay', de:'chüs', it:'a-ri-ve-der-chi', es:'a-dyos', ar:'ma-as-sa-la-ma', fa:'kho-da-ha-fez', prs:'kho-da-ha-fez' } },
+  { id: 'merci', fr: 'Merci', tr: { en:'Thank you', de:'Danke', it:'Grazie', es:'Gracias', pl:'Dziękuję', ar:'شكراً', fa:'ممنون', prs:'ممنون' }, ph: { en:'thengk yu', de:'dan-ke', it:'gra-tsye', es:'gra-syas', ar:'shuk-ran', fa:'mam-nun', prs:'mam-nun' } },
+  { id: 'toilettes', fr: 'Où sont les toilettes ?', tr: { en:'Where is the toilet?', de:'Wo ist die Toilette?', it:'Dove sono i bagni?', es:'¿Dónde está el baño?', pl:'Gdzie są toalety?', ar:'أين الحمام؟', fa:'دستشویی کجاست؟', prs:'تشناب کجاست؟' }, ph: {} },
+  { id: 'jevais-toilettes', fr: 'Je vais aux toilettes', tr: { en:"I'm going to the toilet", de:'Ich gehe auf die Toilette', it:'Vado al bagno', es:'Voy al baño', pl:'Idę do toalety', ar:'أذهب إلى الحمام', fa:'دارم میرم دستشویی', prs:'میروم تشناب' }, ph: {} },
+  { id: 'commentdis', fr: 'Comment tu dis "..." dans ta langue ?', tr: { en:'How do you say "..." in your language?', de:'Wie sagst du "..." in deiner Sprache?', it:'Come si dice "..." nella tua lingua?', es:'¿Cómo se dice "..." en tu idioma?', pl:'Jak mówisz "..." w swoim języku?', ar:'كيف تقول "..." بلغتك؟', fa:'به زبانت "..." چطور میگی؟', prs:'به زبانت "..." چطور میگویی؟' }, ph: {} },
+  { id: 'commenttappelles', fr: 'Comment tu t\'appelles ?', tr: { en:'What\'s your name?', de:'Wie heißt du?', it:'Come ti chiami?', es:'¿Cómo te llamas?', pl:'Jak masz na imię?', ar:'ما اسمك؟', fa:'اسمت چیه؟', prs:'اسمت چیست؟' }, ph: {} },
+  { id: 'jemappelle', fr: 'Je m\'appelle…', tr: { en:'My name is…', de:'Ich heiße…', it:'Mi chiamo…', es:'Me llamo…', pl:'Mam na imię…', ar:'اسمي…', fa:'اسمم هست…', prs:'اسمم است…' }, ph: {} },
+  { id: 'jeparlespas', fr: 'Je ne parle pas ta langue', tr: { en:"I don't speak your language", de:'Ich spreche deine Sprache nicht', it:'Non parlo la tua lingua', es:'No hablo tu idioma', pl:'Nie mówię w twoim języku', ar:'لا أتكلم لغتك', fa:'زبانت را حرف نمیزنم', prs:'به زبانت صحبت نمیکنم' }, ph: {} },
+  { id: 'japprendslangue', fr: 'J\'apprends ta langue (en ce moment)', tr: { en:"I'm learning your language", de:'Ich lerne gerade deine Sprache', it:'Sto imparando la tua lingua', es:'Estoy aprendiendo tu idioma', pl:'Właśnie uczę się twojego języka', ar:'أتعلم لغتك الآن', fa:'دارم زبانت رو یاد میگیرم', prs:'دارم زبانت رو یاد می‌گیرم' }, ph: {} },
+  { id: 'jaimeraisapprendre', fr: 'J\'aimerais apprendre ta langue', tr: { en:"I'd like to learn your language", de:'Ich würde gerne deine Sprache lernen', it:'Mi piacerebbe imparare la tua lingua', es:'Me gustaría aprender tu idioma', pl:'Chciałbym nauczyć się twojego języka', ar:'أودّ تعلم لغتك', fa:'دوست دارم زبانت رو یاد بگیرم', prs:'دوست دارم زبانت رو یاد بگیرم' }, ph: {} },
+  { id: 'jvais-dormir', fr: 'Je vais dormir', tr: { en:"I'm going to sleep", de:'Ich gehe schlafen', it:'Vado a dormire', es:'Me voy a dormir', pl:'Idę spać', ar:'سأنام', fa:'میرم بخوابم', prs:'میروم بخوابم' }, ph: {} },
+  { id: 'jrentre', fr: 'Je rentre chez moi', tr: { en:"I'm going home", de:'Ich gehe nach Hause', it:'Vado a casa', es:'Me voy a casa', pl:'Wracam do domu', ar:'أذهب إلى البيت', fa:'دارم میرم خونه', prs:'دارم میروم خانه' }, ph: {} },
+  { id: 'jefaismalpas', fr: 'Ça me fait mal / du bien', tr: { en:'It hurts / It feels good', de:'Das tut mir weh / gut', it:'Mi fa male / bene', es:'Me duele / me hace bien', pl:'To mnie boli / dobrze mi z tym', ar:'يؤلمني / يريحني', fa:'دردم میکنه / حالم خوبه', prs:'دردم میکنه / خوبم' }, ph: {} },
+  { id: 'suis-perdu', fr: 'Je suis perdu·e', tr: { en:"I'm lost", de:'Ich bin verloren', it:'Mi sono perso/a', es:'Estoy perdido/a', pl:'Zgubiłem/łam się', ar:'أنا ضائع', fa:'گم شدم', prs:'گم شدم' }, ph: {} },
+  { id: 'jaipeur', fr: 'J\'ai peur', tr: { en:"I'm scared", de:'Ich habe Angst', it:'Ho paura', es:'Tengo miedo', pl:'Boję się', ar:'أنا خائف', fa:'میترسم', prs:'میترسم' }, ph: {} },
+  { id: 'coutecombie', fr: 'Ça coûte combien ?', tr: { en:'How much does it cost?', de:'Wie viel kostet das?', it:'Quanto costa?', es:'¿Cuánto cuesta?', pl:'Ile to kosztuje?', ar:'بكم هذا؟', fa:'چند میشه؟', prs:'چند میشه؟' }, ph: {} },
+  { id: 'gare', fr: 'Où est la gare ?', tr: { en:'Where is the train station?', de:'Wo ist der Bahnhof?', it:'Dov\'è la stazione?', es:'¿Dónde está la estación?', pl:'Gdzie jest dworzec?', ar:'أين المحطة؟', fa:'ایستگاه کجاست؟', prs:'ایستگاه کجاست؟' }, ph: {} },
+  { id: 'supermarche', fr: 'Où est le supermarché ?', tr: { en:'Where is the supermarket?', de:'Wo ist der Supermarkt?', it:'Dov\'è il supermercato?', es:'¿Dónde está el supermercado?', pl:'Gdzie jest supermarket?', ar:'أين السوبرماركت؟', fa:'سوپرمارکت کجاست؟', prs:'سوپرمارکت کجاست؟' }, ph: {} },
+  { id: 'prefecture', fr: 'Où est la préfecture ?', tr: { en:'Where is the prefecture?', de:'Wo ist die Präfektur?', it:'Dov\'è la prefettura?', es:'¿Dónde está la prefectura?', pl:'Gdzie jest prefektura?', ar:'أين المحافظة؟', fa:'اداره‌ی پیشوایی کجاست؟', prs:'اداره ولایت کجاست؟' }, ph: {} },
+  { id: 'batterie-tel', fr: 'Mon téléphone n\'a plus de batterie', tr: { en:'My phone is dead', de:'Mein Handy ist leer', it:'Il mio telefono è scarico', es:'Mi teléfono no tiene batería', pl:'Mój telefon jest rozładowany', ar:'بطارية هاتفي انتهت', fa:'شارژ گوشیم تموم شد', prs:'بطری موبایلم خلاص شد' }, ph: {} },
+  { id: 'brancher', fr: 'Où je peux brancher mon téléphone ?', tr: { en:'Where can I charge my phone?', de:'Wo kann ich mein Handy aufladen?', it:'Dove posso caricare il telefono?', es:'¿Dónde puedo cargar mi teléfono?', pl:'Gdzie mogę naładować telefon?', ar:'أين يمكنني شحن هاتفي؟', fa:'کجا میتونم شارژ بزنم؟', prs:'کجا میتوانم شارژ بزنم؟' }, ph: {} },
+  { id: 'jequitte', fr: 'Je m\'en vais', tr: { en:"I'm leaving", de:'Ich gehe jetzt', it:'Me ne vado', es:'Me voy', pl:'Odchodzę', ar:'أنا راحل', fa:'دارم میرم', prs:'دارم میروم' }, ph: {} },
+  { id: 'abientot', fr: 'À bientôt', tr: { en:'See you soon', de:'Bis bald', it:'A presto', es:'Hasta pronto', pl:'Do zobaczenia', ar:'إلى اللقاء', fa:'تا بعد', prs:'تا دیدار بعدی' }, ph: {} },
+  { id: 'allez', fr: 'Allons-y !', tr: { en:"Let's go!", de:'Los geht\'s!', it:'Andiamo!', es:'¡Vamos!', pl:'Chodźmy!', ar:'يلا!', fa:'بریم!', prs:'بریم!' }, ph: {} },
+  { id: 'aider', fr: 'Tu peux m\'aider ?', tr: { en:'Can you help me?', de:'Kannst du mir helfen?', it:'Puoi aiutarmi?', es:'¿Puedes ayudarme?', pl:'Czy możesz mi pomóc?', ar:'هل يمكنك مساعدتي؟', fa:'میتونی کمکم کنی؟', prs:'میتوانی کمکم کنی؟' }, ph: {} },
+  { id: 'betises', fr: 'Tu dis des bêtises', tr: { en:"That's not right / You're wrong", de:'Du redest Unsinn', it:'Stai dicendo sciocchezze', es:'Estás diciendo tonterías', pl:'Mówisz głupoty', ar:'هذا كلام فارغ', fa:'داری چرت میگی', prs:'داری چرت میگی' }, ph: {} },
+  { id: 'jeveux-aider', fr: 'Je veux aider', tr: { en:'I want to help', de:'Ich möchte helfen', it:'Voglio aiutare', es:'Quiero ayudar', pl:'Chcę pomóc', ar:'أريد المساعدة', fa:'میخوام کمک کنم', prs:'میخواهم کمک کنم' }, ph: {} },
+  { id: 'tufaisquoi', fr: 'Tu fais quoi ?', tr: { en:'What are you doing?', de:'Was machst du?', it:'Cosa fai?', es:'¿Qué haces?', pl:'Co robisz?', ar:'ماذا تفعل؟', fa:'داری چیکار میکنی؟', prs:'چی کار داری میکنی؟' }, ph: {} },
+  { id: 'enretard', fr: 'Je suis en retard', pair: 'enavance', tr: { en:"I'm late", de:'Ich bin spät dran', it:'Sono in ritardo', es:'Llegué tarde', pl:'Jestem spóźniony/a', ar:'أنا متأخر', fa:'دیرم شده', prs:'دیرم شده' }, ph: {} },
+  { id: 'enavance', fr: 'Je suis en avance', pair: 'enretard', tr: { en:"I'm early", de:'Ich bin früh', it:'Sono in anticipo', es:'Llegué temprano', pl:'Jestem wcześnie', ar:'أنا مبكر', fa:'زود اومدم', prs:'زود آمدم' }, ph: {} },
+  { id: 'parler-doucement', fr: 'Tu peux parler plus doucement ?', tr: { en:'Can you speak more slowly?', de:'Kannst du langsamer sprechen?', it:'Puoi parlare più lentamente?', es:'¿Puedes hablar más despacio?', pl:'Możesz mówić wolniej?', ar:'هل يمكنك التحدث ببطء أكثر؟', fa:'میتونی آروم تر حرف بزنی؟', prs:'میتوانی آهسته‌تر حرف بزنی؟' }, ph: {} },
+  { id: 'desole', fr: 'Je suis désolé·e', tr: { en:"I'm sorry", de:'Es tut mir leid', it:'Mi dispiace', es:'Lo siento', pl:'Przepraszam', ar:'أنا آسف', fa:'ببخشید', prs:'ببخشید' }, ph: {} },
+  { id: 'numerostele', fr: 'On échange nos numéros ?', tr: { en:'Shall we exchange numbers?', de:'Sollen wir Nummern austauschen?', it:'Ci scambiamo i numeri?', es:'¿Cambiamos números?', pl:'Wymienimy się numerami?', ar:'نتبادل أرقامنا؟', fa:'شماره رد و بدل کنیم؟', prs:'شماره رد و بدل کنیم؟' }, ph: {} },
+  { id: 'je-mange', fr: 'Je veux manger', tr: { en:'I want to eat', de:'Ich möchte essen', it:'Voglio mangiare', es:'Quiero comer', pl:'Chcę jeść', ar:'أريد الأكل', fa:'میخوام بخورم', prs:'میخواهم بخورم' }, ph: {} },
+  { id: 'tu-manges', fr: 'Tu veux manger ?', tr: { en:'Do you want to eat?', de:'Möchtest du essen?', it:'Vuoi mangiare?', es:'¿Quieres comer?', pl:'Chcesz jeść?', ar:'هل تريد الأكل؟', fa:'میخوای بخوری؟', prs:'میخواهی بخوری؟' }, ph: {} },
+  { id: 'comment-tu-sens', fr: 'Comment tu te sens ?', tr: { en:'How are you feeling?', de:'Wie geht es dir?', it:'Come stai?', es:'¿Cómo te sientes?', pl:'Jak się czujesz?', ar:'كيف حالك؟', fa:'حالت چطوره؟', prs:'حالت چطور است؟' }, ph: {} },
+  { id: 'desole-pour', fr: 'Je suis désolé·e pour ce qu\'il t\'est arrivé', tr: { en:"I'm sorry for what happened to you", de:'Es tut mir leid für das, was dir passiert ist', it:'Mi dispiace per quello che ti è successo', es:'Lamento lo que te pasó', pl:'Przykro mi z powodu tego, co cię spotkało', ar:'أنا آسف لما حدث لك', fa:'برای اتفاقی که افتاده متأسفم', prs:'برای اتفاقی که افتاده متأسفم' }, ph: {} },
+  { id: 'enrve', fr: 'Tu es énervé·e ?', tr: { en:'Are you angry?', de:'Bist du verärgert?', it:'Sei arrabbiato?', es:'¿Estás enojado?', pl:'Jesteś zły?', ar:'هل أنت غاضب؟', fa:'ناراحتی؟', prs:'ناراحت هستی؟' }, ph: {} },
+  { id: 'pourquoi-enrve', fr: 'Pourquoi tu es énervé·e ?', tr: { en:'Why are you angry?', de:'Warum bist du verärgert?', it:'Perché sei arrabbiato?', es:'¿Por qué estás enojado?', pl:'Dlaczego jesteś zły?', ar:'لماذا أنت غاضب؟', fa:'چرا ناراحتی؟', prs:'چرا ناراحت هستی؟' }, ph: {} },
+  { id: 'content', fr: 'Tu es content·e ?', tr: { en:'Are you happy?', de:'Bist du zufrieden?', it:'Sei contento?', es:'¿Estás contento?', pl:'Jesteś zadowolony?', ar:'هل أنت سعيد؟', fa:'خوشحالی؟', prs:'خوشحال هستی؟' }, ph: {} },
+  { id: 'questionposer', fr: 'Je peux poser une question ?', tr: { en:'Can I ask a question?', de:'Darf ich eine Frage stellen?', it:'Posso fare una domanda?', es:'¿Puedo hacer una pregunta?', pl:'Czy mogę zadać pytanie?', ar:'هل يمكنني طرح سؤال؟', fa:'میتونم یه سوال بپرسم؟', prs:'میتوانم یک سوال بپرسم؟' }, ph: {} },
+  { id: 'veux-changer', fr: 'Je veux changer', tr: { en:'I want to change', de:'Ich möchte wechseln', it:'Voglio cambiare', es:'Quiero cambiar', pl:'Chcę zmienić', ar:'أريد التغيير', fa:'میخوام عوض کنم', prs:'میخواهم تغییر بدهم' }, ph: {} },
+];
+
+const SUGGESTIONS_MAP = {
+  bonjour: ['enchante','commenttappelles','comment-tu-sens'],
+  enchante: ['commenttappelles','japprendslangue','jemappelle'],
+  commenttappelles: ['jemappelle'],
+  jemappelle: ['enchante','japprendslangue'],
+  aurevoir: ['abientot','jrentre','jequitte'],
+  merci: ['daccord','desole'],
+  aider: ['comprends','comprendspas','commentdis'],
+  comprends: ['japprendslangue','commentdis'],
+  comprendspas: ['repete','repete-doucement','parler-doucement'],
+  toilettes: ['jevais-toilettes'],
+  enrve: ['pourquoi-enrve','desole-pour'],
+  'comment-tu-sens': ['content','enrve'],
+};
+
+const PHONETICS_REF = [
+  { sym:'a', desc:"comme dans «chat»", examples:{ fr:'chat', en:'cat', de:'Mann', ar:'كتب' } },
+  { sym:'e', desc:"comme dans «été»", examples:{ fr:'été', en:'they', de:'See', it:'bene' } },
+  { sym:'i', desc:"comme dans «vie»", examples:{ fr:'vie', en:'feel', de:'Liebe', ar:'بيت' } },
+  { sym:'o', desc:"comme dans «mot»", examples:{ fr:'mot', en:'go', de:'Boot', it:'sole' } },
+  { sym:'u', desc:"comme dans «lune»", examples:{ fr:'lune', de:'Mutter', ar:'كتب' } },
+  { sym:'ou', desc:"comme dans «vous»", examples:{ fr:'vous', en:'food', de:'Schule' } },
+  { sym:'eu', desc:"comme dans «peur»", examples:{ fr:'peur', de:'schön' } },
+  { sym:'an/en', desc:"nasale ouverte", examples:{ fr:'en, an', de:'', pl:'' } },
+  { sym:'b', desc:"comme dans «bon»", examples:{ fr:'bon', en:'ball', fa:'bebakhshid' } },
+  { sym:'d', desc:"comme dans «dire»", examples:{ fr:'dire', en:'door' } },
+  { sym:'f', desc:"comme dans «feu»", examples:{ fr:'feu', en:'fire', de:'Feuer' } },
+  { sym:'g', desc:"comme dans «gare»", examples:{ fr:'gare', en:'go' } },
+  { sym:'h', desc:"aspiré (anglais, allemand)", examples:{ en:'hello', de:'Haus', fa:'hast' } },
+  { sym:'j/zh', desc:"comme dans «je»", examples:{ fr:'je', en:'measure' } },
+  { sym:'k', desc:"comme dans «car»", examples:{ fr:'car', en:'car', de:'Kind' } },
+  { sym:'kh', desc:"fricative vélaire (arabe/persan)", examples:{ ar:'خبر', fa:'خوب' } },
+  { sym:'l', desc:"comme dans «la»", examples:{ fr:'la', en:'love' } },
+  { sym:'m', desc:"comme dans «ma»", examples:{ fr:'ma', en:'me', ar:'مرحبا' } },
+  { sym:'n', desc:"comme dans «non»", examples:{ fr:'non', en:'no' } },
+  { sym:'p', desc:"comme dans «pas»", examples:{ fr:'pas', en:'put' } },
+  { sym:'r', desc:"roulé (it, es) ou guttural (fr, de)", examples:{ fr:'rue', it:'amore', de:'Rot' } },
+  { sym:'s', desc:"comme dans «si»", examples:{ fr:'si', en:'see', ar:'سلام' } },
+  { sym:'sh', desc:"comme dans «chat»", examples:{ fr:'chat', en:'she', fa:'shab' } },
+  { sym:'t', desc:"comme dans «tu»", examples:{ fr:'tu', en:'top' } },
+  { sym:'th', desc:"anglais «think» ou «the»", examples:{ en:'think / the' } },
+  { sym:'v', desc:"comme dans «vous»", examples:{ fr:'vous', en:'very' } },
+  { sym:'w', desc:"comme dans «oui»", examples:{ fr:'oui', en:'win' } },
+  { sym:'y', desc:"semi-voyelle comme «yeux»", examples:{ fr:'yeux', en:'yes' } },
+  { sym:'z', desc:"comme dans «zéro»", examples:{ fr:'zéro', en:'zero', ar:'زيت' } },
+  { sym:'gh', desc:"r guttural (arabe/persan)", examples:{ ar:'غالي', fa:'ghaza' } },
+  { sym:'\'', desc:"coup de glotte (arabe)", examples:{ ar:'عين' } },
+];
+
+let state = {
+  nativeLang: 'fr',
+  targetLang: 'en',
+  showSuggestions: false,
+  showPairs: true,
+  showPhonetic: false,
+  useLatin: false,
+  lightTheme: false,
+  fontSize: 18,
+  currentItem: null,
+  currentScreen: 'welcome',
+  splitCurrentItems: [],
+  splitMyReceived: null,
+  splitTheirReceived: null,
+};
+
+let selectedItems = [];
+let multiSelectMode = false;
+let longPressTimer = null;
+
+function getTranslation(item, lang) {
+  if (lang === 'fr') return item.fr;
+  if (state.useLatin && LANGUAGES[lang]?.abjad && item.ph && item.ph[lang]) return item.ph[lang];
+  return item.tr[lang] || item.fr;
+}
+
+function getPhonetic(item, lang) {
+  if (!item.ph) return '';
+  return item.ph[lang] || '';
+}
+
+function getItemById(id) {
+  return ITEMS_RAW.find(i => i.id === id);
+}
+
+function speak(text, lang) {
+  if ('speechSynthesis' in window) {
+    const u = new SpeechSynthesisUtterance(text);
+    const voiceLang = { fr:'fr-FR', en:'en-US', de:'de-DE', it:'it-IT', es:'es-ES', pl:'pl-PL', ar:'ar-SA', fa:'fa-IR', prs:'fa-AF' };
+    u.lang = voiceLang[lang] || 'fr-FR';
+    u.rate = 0.85;
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(u);
+  }
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.screen === name);
+  });
+  state.currentScreen = name;
+  if (name === 'main') renderItems();
+  if (name === 'split') renderSplit();
+  if (name === 'phonetics') renderPhonetics();
+}
+
+function buildLangGrid(containerId, selectedLang, conflictLang, onSelect) {
+  const grid = document.getElementById(containerId);
+  grid.innerHTML = '';
+  Object.entries(LANGUAGES).forEach(([code, lang]) => {
+    const btn = document.createElement('button');
+    const isSelected = selectedLang === code;
+    const isConflict = conflictLang === code;
+    btn.className = 'lang-btn' + (isSelected ? ' selected' : '') + (isConflict ? ' conflict' : '');
+    btn.textContent = lang.flag;
+    btn.title = lang.name;
+    btn.onclick = () => {
+      if (isConflict) return;
+      onSelect(code);
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function initWelcome() {
+  buildLangGrid('native-lang-grid', state.nativeLang, state.targetLang, code => {
+    state.nativeLang = code;
+    refreshWelcomeGrids();
+  });
+  buildLangGrid('target-lang-grid', state.targetLang, state.nativeLang, code => {
+    state.targetLang = code;
+    refreshWelcomeGrids();
+  });
+  checkStartReady();
+}
+
+function refreshWelcomeGrids() {
+  buildLangGrid('native-lang-grid', state.nativeLang, state.targetLang, code => {
+    state.nativeLang = code;
+    refreshWelcomeGrids();
+  });
+  buildLangGrid('target-lang-grid', state.targetLang, state.nativeLang, code => {
+    state.targetLang = code;
+    refreshWelcomeGrids();
+  });
+  checkStartReady();
+}
+
+function checkStartReady() {
+  const same = state.nativeLang === state.targetLang;
+  const btn = document.getElementById('start-btn');
+  btn.disabled = same;
+  btn.textContent = same ? '⚠ Choisir deux langues différentes' : 'Commencer →';
+}
+
+document.getElementById('start-btn').addEventListener('click', () => {
+  updateTopBar();
+  showScreen('main');
+});
+
+function updateTopBar() {
+  document.getElementById('topbar-native-flag').textContent = LANGUAGES[state.nativeLang].flag;
+  document.getElementById('topbar-target-flag').textContent = LANGUAGES[state.targetLang].flag;
+  const isAbjad = LANGUAGES[state.targetLang]?.abjad;
+  document.getElementById('row-abjad').style.display = isAbjad ? '' : 'none';
+}
+
+function renderItems() {
+  const list = document.getElementById('items-list');
+  list.innerHTML = '';
+  const pairsDone = new Set();
+  ITEMS_RAW.forEach((item, idx) => {
+    if (pairsDone.has(item.id)) return;
+    const pairId = item.pair;
+    const pairItem = pairId ? getItemById(pairId) : null;
+    if (pairItem && state.showPairs) {
+      pairsDone.add(pairId);
+      const wrapper = document.createElement('div');
+      wrapper.className = 'item-pair';
+      wrapper.style.animationDelay = (idx * 0.02) + 's';
+      wrapper.appendChild(makeItemBtn(item));
+      wrapper.appendChild(makeItemBtn(pairItem));
+      list.appendChild(wrapper);
+    } else {
+      const btn = makeItemBtn(item);
+      btn.style.animationDelay = (idx * 0.02) + 's';
+      list.appendChild(btn);
+    }
+  });
+  renderSuggestionsBar(null);
+}
+
+function makeItemBtn(item) {
+  const btn = document.createElement('button');
+  const isMultiSel = selectedItems.some(i => i.id === item.id);
+  btn.className = 'item-btn' + (state.currentItem?.id === item.id && !multiSelectMode ? ' active' : '') + (isMultiSel ? ' multiselected' : '');
+  const text = document.createElement('span');
+  text.className = 'item-text';
+  const nativeText = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+  text.textContent = nativeText;
+  if (LANGUAGES[state.nativeLang]?.rtl) text.classList.add('rtl');
+  btn.appendChild(text);
+  const arrow = document.createElement('span');
+  arrow.className = 'item-arrow';
+  arrow.textContent = isMultiSel ? '✓' : '›';
+  btn.appendChild(arrow);
+  btn.addEventListener('pointerdown', () => {
+    longPressTimer = setTimeout(() => {
+      longPressTimer = null;
+      if (!multiSelectMode) enterMultiSelectMode(item);
+    }, 500);
+  });
+  btn.addEventListener('pointerup', () => clearTimeout(longPressTimer));
+  btn.addEventListener('pointerleave', () => clearTimeout(longPressTimer));
+  btn.onclick = () => {
+    if (multiSelectMode) toggleMultiSelect(item);
+    else selectItem(item);
+  };
+  return btn;
+}
+
+function selectItem(item) {
+  state.currentItem = item;
+  const banner = document.getElementById('translation-banner');
+  const transText = document.getElementById('trans-text');
+  const transPhonetic = document.getElementById('trans-phonetic');
+  const transAudio = document.getElementById('trans-audio-btn');
+  const transFlag = document.getElementById('trans-flag');
+  const translation = getTranslation(item, state.targetLang);
+  const phonetic = getPhonetic(item, state.targetLang);
+  banner.classList.remove('empty');
+  transFlag.textContent = LANGUAGES[state.targetLang].flag;
+  transText.textContent = translation;
+  if (LANGUAGES[state.targetLang]?.rtl && !state.useLatin) transText.classList.add('rtl');
+  else transText.classList.remove('rtl');
+  if (state.showPhonetic && phonetic) {
+    transPhonetic.textContent = '[ ' + phonetic + ' ]';
+    transPhonetic.classList.remove('hidden');
+  } else {
+    transPhonetic.classList.add('hidden');
+  }
+  transAudio.classList.remove('hidden');
+  transAudio.onclick = () => speak(translation, state.targetLang);
+  speak(translation, state.targetLang);
+  document.querySelectorAll('.item-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.item-btn').forEach(b => {
+    if (b.querySelector('.item-text')?.textContent === (state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr))) {
+      b.classList.add('active');
+    }
+  });
+  if (state.showSuggestions) renderSuggestionsBar(item.id);
+}
+
+function renderSuggestionsBar(itemId) {
+  const bar = document.getElementById('suggestions-bar');
+  const chips = document.getElementById('suggestions-chips');
+  if (!state.showSuggestions) { bar.classList.add('hidden'); return; }
+  bar.classList.remove('hidden');
+  chips.innerHTML = '';
+  const sugIds = itemId ? (SUGGESTIONS_MAP[itemId] || []) : [];
+  if (sugIds.length === 0) { bar.classList.add('hidden'); return; }
+  sugIds.forEach(id => {
+    const item = getItemById(id);
+    if (!item) return;
+    const chip = document.createElement('button');
+    chip.className = 'suggestion-chip';
+    chip.textContent = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    chip.onclick = () => selectItem(item);
+    chips.appendChild(chip);
+  });
+}
+
+function renderSplit() {
+  const candidates = ITEMS_RAW.slice(0, 10);
+  state.splitCurrentItems = [candidates[0], candidates[1]];
+  renderSplitChoices();
+}
+
+function renderSplitChoices() {
+  const myChoices = document.getElementById('split-my-choices');
+  const theirChoices = document.getElementById('split-their-choices');
+  myChoices.innerHTML = '';
+  theirChoices.innerHTML = '';
+  state.splitCurrentItems.forEach(item => {
+    const myBtn = document.createElement('button');
+    myBtn.className = 'split-choice-btn';
+    const myTxt = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    myBtn.textContent = myTxt;
+    if (LANGUAGES[state.nativeLang]?.rtl) myBtn.classList.add('rtl');
+    myBtn.onclick = () => sendSplitMessage(item, 'mine');
+    myChoices.appendChild(myBtn);
+    const theirBtn = document.createElement('button');
+    theirBtn.className = 'split-choice-btn';
+    const theirTxt = getTranslation(item, state.targetLang);
+    theirBtn.textContent = theirTxt;
+    if (LANGUAGES[state.targetLang]?.rtl && !state.useLatin) theirBtn.classList.add('rtl');
+    theirBtn.onclick = () => sendSplitMessage(item, 'theirs');
+    theirChoices.appendChild(theirBtn);
+  });
+  const browseMy = document.createElement('button');
+  browseMy.className = 'split-browse-btn';
+  browseMy.textContent = '+ Choisir autre phrase';
+  browseMy.onclick = () => openBrowseModal('mine');
+  myChoices.appendChild(browseMy);
+  const browseThem = document.createElement('button');
+  browseThem.className = 'split-browse-btn';
+  browseThem.textContent = '+ Choisir autre phrase';
+  browseThem.onclick = () => openBrowseModal('theirs');
+  theirChoices.appendChild(browseThem);
+}
+
+function sendSplitMessage(item, side) {
+  if (side === 'mine') {
+    const theirText = getTranslation(item, state.targetLang);
+    document.getElementById('split-their-received-txt').textContent = theirText;
+    document.getElementById('split-their-received-txt').classList.remove('empty');
+    document.getElementById('split-my-received-txt').textContent = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    document.getElementById('split-my-received-txt').classList.remove('empty');
+    speak(theirText, state.targetLang);
+    const nextIds = SUGGESTIONS_MAP[item.id];
+    if (nextIds && nextIds.length >= 2) {
+      state.splitCurrentItems = [getItemById(nextIds[0]), getItemById(nextIds[1])].filter(Boolean);
+    } else {
+      const r = Math.floor(Math.random() * (ITEMS_RAW.length - 2));
+      state.splitCurrentItems = [ITEMS_RAW[r], ITEMS_RAW[r+1]];
+    }
+    renderSplitChoices();
+  } else {
+    const myText = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    document.getElementById('split-my-received-txt').textContent = myText;
+    document.getElementById('split-my-received-txt').classList.remove('empty');
+    const theirText = getTranslation(item, state.targetLang);
+    document.getElementById('split-their-received-txt').textContent = theirText;
+    document.getElementById('split-their-received-txt').classList.remove('empty');
+    speak(myText, state.nativeLang);
+  }
+}
+
+function openBrowseModal(side) {
+  const modal = document.getElementById('browse-modal');
+  const container = document.getElementById('browse-modal-items');
+  document.getElementById('browse-modal-title').textContent = side === 'mine' ? 'Choisir une phrase (ma langue)' : 'Choisir une phrase (leur langue)';
+  container.innerHTML = '';
+  ITEMS_RAW.forEach(item => {
+    const btn = document.createElement('button');
+    btn.className = 'item-btn';
+    const label = side === 'mine'
+      ? (state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr))
+      : getTranslation(item, state.targetLang);
+    btn.textContent = label;
+    btn.onclick = () => {
+      const r = Math.floor(Math.random() * ITEMS_RAW.length);
+      state.splitCurrentItems[0] = item;
+      state.splitCurrentItems[1] = ITEMS_RAW[r];
+      renderSplitChoices();
+      modal.classList.remove('open');
+    };
+    container.appendChild(btn);
+  });
+  modal.classList.add('open');
+}
+
+document.getElementById('browse-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+function renderPhonetics() {
+  const table = document.getElementById('phonetics-table');
+  table.innerHTML = '<thead><tr><th>Son</th><th>Description</th><th>Exemples</th></tr></thead>';
+  const tbody = document.createElement('tbody');
+  PHONETICS_REF.forEach(row => {
+    const tr = document.createElement('tr');
+    const exStr = Object.entries(row.examples).map(([lang, ex]) => `${LANGUAGES[lang]?.flag || lang} ${ex}`).join(' · ');
+    tr.innerHTML = `<td class="phone-sym">${row.sym}</td><td>${row.desc}</td><td style="color:var(--text-dim);font-size:0.78rem">${exStr}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+}
+
+function buildSettingsLangGrids() {
+  buildLangGrid('settings-native-grid', state.nativeLang, state.targetLang, code => {
+    state.nativeLang = code;
+    document.getElementById('native-lang-display').textContent = LANGUAGES[code].name;
+    buildSettingsLangGrids();
+    updateTopBar();
+    renderItems();
+  });
+  buildLangGrid('settings-target-grid', state.targetLang, state.nativeLang, code => {
+    state.targetLang = code;
+    document.getElementById('target-lang-display').textContent = LANGUAGES[code].name;
+    buildSettingsLangGrids();
+    updateTopBar();
+    renderItems();
+  });
+}
+
+function toggleTheme() {
+  state.lightTheme = !state.lightTheme;
+  document.body.classList.toggle('theme-light', state.lightTheme);
+  document.getElementById('toggle-theme').classList.toggle('on', state.lightTheme);
+}
+
+function changeFontSize(delta) {
+  state.fontSize = Math.max(12, Math.min(28, state.fontSize + delta));
+  document.documentElement.style.setProperty('--font-size', state.fontSize + 'px');
+  document.getElementById('font-size-display').textContent = state.fontSize;
+}
+
+function toggleSuggestions() {
+  state.showSuggestions = !state.showSuggestions;
+  document.getElementById('toggle-suggestions').classList.toggle('on', state.showSuggestions);
+  if (state.currentScreen === 'main') renderSuggestionsBar(state.currentItem?.id || null);
+}
+
+function togglePairs() {
+  state.showPairs = !state.showPairs;
+  document.getElementById('toggle-pairs').classList.toggle('on', state.showPairs);
+  if (state.currentScreen === 'main') renderItems();
+}
+
+function togglePhonetic() {
+  state.showPhonetic = !state.showPhonetic;
+  document.getElementById('toggle-phonetic').classList.toggle('on', state.showPhonetic);
+}
+
+function toggleLatin() {
+  state.useLatin = !state.useLatin;
+  document.getElementById('toggle-latin').classList.toggle('on', state.useLatin);
+  renderItems();
+}
+
+document.querySelectorAll('.nav-btn[data-screen]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    buildSettingsLangGrids();
+    showScreen(btn.dataset.screen);
+  });
+});
+
+document.getElementById('split-toggle-btn').addEventListener('click', () => showScreen('split'));
+document.getElementById('settings-btn').addEventListener('click', () => {
+  buildSettingsLangGrids();
+  showScreen('settings');
+});
+
+function enterMultiSelectMode(item) {
+  multiSelectMode = true;
+  selectedItems = [item];
+  updateComposeBar();
+  updateAllItemBtns();
+}
+
+function toggleMultiSelect(item) {
+  const idx = selectedItems.findIndex(i => i.id === item.id);
+  if (idx === -1) {
+    selectedItems.push(item);
+  } else {
+    selectedItems.splice(idx, 1);
+    if (selectedItems.length === 0) multiSelectMode = false;
+  }
+  updateComposeBar();
+  updateAllItemBtns();
+}
+
+function clearCompose() {
+  selectedItems = [];
+  multiSelectMode = false;
+  updateComposeBar();
+  updateAllItemBtns();
+}
+
+function updateComposeBar() {
+  const bar = document.getElementById('compose-bar');
+  const chipsContainer = document.getElementById('compose-chips');
+  if (selectedItems.length === 0) { bar.classList.remove('visible'); return; }
+  bar.classList.add('visible');
+  chipsContainer.innerHTML = '';
+  selectedItems.forEach((item, idx) => {
+    const nativeText = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    const short = nativeText.length > 20 ? nativeText.slice(0, 18) + '…' : nativeText;
+    const chip = document.createElement('button');
+    chip.className = 'compose-chip';
+    chip.innerHTML = `<span>${short}</span><span class="compose-chip-x">✕</span>`;
+    chip.onclick = () => {
+      selectedItems.splice(idx, 1);
+      if (selectedItems.length === 0) multiSelectMode = false;
+      updateComposeBar();
+      updateAllItemBtns();
+    };
+    chipsContainer.appendChild(chip);
+  });
+}
+
+function updateAllItemBtns() {
+  document.querySelectorAll('.item-btn').forEach(btn => {
+    const textEl = btn.querySelector('.item-text');
+    if (!textEl) return;
+    const txt = textEl.textContent;
+    const isSelected = selectedItems.some(item => {
+      const nativeText = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+      return nativeText === txt;
+    });
+    btn.classList.toggle('multiselected', isSelected);
+    const arrow = btn.querySelector('.item-arrow');
+    if (arrow) arrow.textContent = isSelected ? '✓' : '›';
+  });
+}
+
+function openComposeResult() {
+  if (selectedItems.length === 0) return;
+  const nativeParts = selectedItems.map(item => state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr));
+  const targetParts = selectedItems.map(item => getTranslation(item, state.targetLang));
+  const nativeSentence = nativeParts.join(' — ');
+  const targetSentence = targetParts.join(' — ');
+  const nativeLang = LANGUAGES[state.nativeLang];
+  const targetLang = LANGUAGES[state.targetLang];
+  document.getElementById('compose-native-lang-label').textContent = nativeLang.flag + ' ' + nativeLang.name;
+  document.getElementById('compose-target-lang-label').textContent = targetLang.flag + ' ' + targetLang.name;
+  document.getElementById('compose-native-text').textContent = nativeSentence;
+  document.getElementById('compose-target-text').textContent = targetSentence;
+  const pillsEl = document.getElementById('compose-seq-pills');
+  pillsEl.innerHTML = '';
+  selectedItems.forEach(item => {
+    const nativeText = state.nativeLang === 'fr' ? item.fr : (item.tr[state.nativeLang] || item.fr);
+    const pill = document.createElement('span');
+    pill.className = 'compose-seq-pill';
+    pill.textContent = nativeText;
+    pillsEl.appendChild(pill);
+  });
+  document.getElementById('compose-native-audio').onclick = () => speak(nativeSentence, state.nativeLang);
+  document.getElementById('compose-target-audio').onclick = () => speak(targetSentence, state.targetLang);
+  document.getElementById('compose-result-modal').classList.add('open');
+  speak(nativeSentence, state.nativeLang);
+}
+
+document.getElementById('compose-result-modal').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+initWelcome();
+buildSettingsLangGrids();
+</script>
+</body>
+</html>
